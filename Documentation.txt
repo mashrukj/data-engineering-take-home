@@ -1,0 +1,11 @@
+This script has 4 functions:
+
+base64_encode(plain_string): This function takes a string as input and returns the base64 encoded version of the string. It does this by first encoding the string to ASCII and then encoding the ASCII value to base64.
+
+get_messages(): This function receives messages from an SQS (Simple Queue Service) queue. It uses the boto3 library to instantiate an SQS client and call the receive_message method with the specified parameters. It returns a list of messages.
+
+transform_data(messages): This function takes a list of messages as input and returns a modified list of messages. It iterates through the messages and for each message, it gets the ip and device_id fields and base64 encodes them using the base64_encode function. It then replaces the original ip and device_id fields with the encoded values and adds the modified message to a new list.
+
+load_data_postgre(message_list): This function takes a list of messages as input and loads them into a PostgreSQL database. It does this by connecting to the database using psycopg2, creating a cursor, and iterating through the message list. For each message, it adds a create_date field with the current datetime and then inserts the message into the user_logins table in the database.
+
+The main() function is the entry point of the script and consists of three calls to the above functions. It receives messages from the SQS queue, transforms the data, and then loads it into the PostgreSQL database. If the script is run as the main module (i.e., if __name__ == "__main__":), the main() function will be called.
