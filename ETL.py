@@ -2,7 +2,7 @@ import boto3
 import json
 import base64
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timezone
 
 def base64_encode(plain_string):
     """Function to encode string into base64"""
@@ -11,7 +11,7 @@ def base64_encode(plain_string):
     ascii_string = plain_string.encode('ascii')
 
     # Encode ASCII string to base64
-    encoded_string = base64.b64encode(ascii_string)
+    encoded_string = base64.b64encode(ascii_string).decode('utf-8')
 
     return encoded_string
 
@@ -23,7 +23,10 @@ def get_messages():
 
     # Receive messages from queue
     response = sqs_client.receive_message(
-        QueueUrl="http://localhost:4566/000000000000/login-queue")
+        QueueUrl="http://localhost:4566/000000000000/login-queue",
+        MaxNumberOfMessages=10,
+        WaitTimeSeconds=10
+    )
 
     # Get messages from SQS
     messages = response['Messages']
@@ -73,18 +76,20 @@ def load_data_postgre(message_list):
     # Create a Cursor
     cursor = postgres_conn.cursor()
 
-    
-
     # Iterate through messages
     for message_json in message_list:
-        message_json['create_date'] = datetime.now()
-        print(message_json)
+        # Remove 'None Type' values
+        message_json['locale'] = 'None' if message_json['locale'] == None else message_json['locale']
+        # Set 'create_date' field as current date
+        message_json['create_date'] = datetime.now().strftime("%Y-%m-%d")
+
+        # Convert dictionary values to list
         values = list(message_json.values())
 
-        print(values)
+        # Execute the insert query
+        cursor.execute("INSERT INTO user_logins (user_id, app_version, device_type, masked_ip, locale, masked_device_id, create_date) VALUES (%s, %s, %s, %s, %s, %s, %s)", values)
 
-        cursor.execute("INSERT INTO user_logins (user_id, device_type, masked_ip, masked_device_id, locale, app_version, create_date) VALUES (%s, %s, %s, %s, %s, %s, )", values)
-
+        # Commit data to Postgres
         postgres_conn.commit()
 
     return
